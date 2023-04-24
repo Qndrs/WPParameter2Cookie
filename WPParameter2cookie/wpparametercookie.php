@@ -8,7 +8,7 @@ Author: Qndrs
 Author URI: qndrs.training
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
-Version: 1.1
+Version: 1.2
 */
 
 // Add a panel to the administration area, settings panel
@@ -85,10 +85,11 @@ function wp_param_to_cookie_register_settings() {
 // make sure the cookie setting is done before output is send
 add_action( 'init', 'wp_param_to_cookie_function' );
 // function that explodes the param string and walks through it
-function wp_param_to_cookie_function() {
+function wp_param_to_cookie_function():Array {
     $wp_param = get_option('wp_param_to_cookie_variable');
     $a_wp_param = explode(',', $wp_param) ;
     $wp_param_time = get_option('wp_param_to_cookie_time');
+    $a_cookiesset = array();
     foreach($a_wp_param as $wp_param_key => $wp_param_value) {
         if (
             isset($_REQUEST[$wp_param_value])
@@ -100,13 +101,28 @@ function wp_param_to_cookie_function() {
                 , time() + (int)$wp_param_time // what is a good time?
                 , COOKIEPATH, COOKIE_DOMAIN
             );
-            // return 'name: ' . $wp_param_value . ' time added: ' .$wp_param_time . ' value: ' . $_REQUEST[$wp_param_value] ;
+            $a_cookiesset[$wp_param_value] = $_REQUEST[$wp_param_value] ;
         }
     }
+    return $a_cookiesset ;
 }
 
-function wp_param_to_cookie_shortcode_function() {
-    $result = wp_param_to_cookie_function(); 
-    return $result; 
+function wp_param_to_cookie_shortcode_function($atts):String {
+    $message = null;
+    $atts = shortcode_atts( array(
+        'report' => 'off',
+        'format' => 'json'
+    ), $atts );
+    $report = $atts['report'] ; // on or off. Default: off
+    $format = $atts['format'] ; // txt or json. Default: json
+    $result = wp_param_to_cookie_function();
+    if($report == 'on' AND $format == 'txt'){
+        foreach ($result as $key => $value){
+            $message .= 'Cookie name: ' . $key . ' with value: ' . $value . '<br>' ;
+        }
+    } elseif($report == 'on' AND $format == 'json') {
+        $message .= '<pre>' . json_encode($result) . '</pre>';
+    }
+    return $message;
 }
 add_shortcode( 'wp_param_to_cookie', 'wp_param_to_cookie_shortcode_function' ); 

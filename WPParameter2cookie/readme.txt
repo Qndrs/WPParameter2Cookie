@@ -3,7 +3,7 @@ Contributors: qndrs
 Tags: cookie, parameter, shortcode, settings
 Requires at least: 6.0
 Tested up to: 6.0
-Stable tag: 1.1
+Stable tag: 1.2
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -30,6 +30,9 @@ Ja, je kunt meerdere parameters opslaan door een kommagescheiden lijst in te vul
 
 == Changelog ==
 
+= 1.2 =
+
+Added reporting shortcode parameters. report = "on" (default off) and format = "txt" | "json" (default json)
 = 1.1 =
 
 Added option to set cookie expiration time.
