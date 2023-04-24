@@ -1,6 +1,5 @@
 === WP Parameter naar Cookie ===
 Contributors: qndrs
-Donate link: https://www.paypal.com/donate?hosted_button_id=XXXXXXXXXXXXX
 Tags: cookie, parameter, shortcode, settings
 Requires at least: 6.0
 Tested up to: 6.0
