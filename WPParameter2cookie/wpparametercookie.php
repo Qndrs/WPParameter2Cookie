@@ -19,7 +19,7 @@ function wp_param_to_cookie_add_admin_panel() {
         'WP Param to Cookie Settings',
         'WP Param to Cookie',
         'manage_options',
-        'wp_param_to_cookie-settings',
+        'wp_param_to_cookie_settings',
         'wp_param_to_cookie_render_admin_panel',
         'dashicons-admin-generic'
     );
@@ -31,15 +31,23 @@ function wp_param_to_cookie_render_admin_panel() {
     <div class="wrap">
         <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
         <form method="post" action="options.php">
-            <?php settings_fields('wp_param_to_cookie-settings-group'); ?>
-            <?php do_settings_sections('wp_param_to_cookie-settings-group'); ?>
+            <?php settings_fields('wp_param_to_cookie_settings_group'); ?>
+            <?php do_settings_sections('wp_param_to_cookie_settings_group'); ?>
             <table class="form-table">
                 <tr>
                     <th scope="row" style="width: 30%">
-                        <label for="wp_param_to_cookie-variable">Welke parameter(s) moeten in een cookie? Kommagescheiden lijst wanneer meer dan 1.<br>Shortcode: [wp_param_to_cookie ]</label>
+                        <label for="wp_param_to_cookie_variable">Welke parameter(s) moeten in een cookie? Kommagescheiden lijst wanneer meer dan 1.<br>Shortcode: [wp_param_to_cookie ]</label>
                     </th>
                     <td>
-                        <input type="text" id="wp_param_to_cookie-variable" name="wp_param_to_cookie_variable" value="<?php echo esc_attr(get_option('wp_param_to_cookie_variable')); ?>">
+                        <input type="text" id="wp_param_to_cookie_variable" name="wp_param_to_cookie_variable" value="<?php echo esc_attr(get_option('wp_param_to_cookie_variable')); ?>">
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row" style="width: 30%">
+                        <label for="wp_param_to_cookie_time">Hoe lang moet het cookie bewaard blijven? In seconden. (3600 = 1 uur)</label>
+                    </th>
+                    <td>
+                        <input type="number" id="wp_param_to_cookie_time" name="wp_param_to_cookie_time" value="<?php echo esc_attr(get_option('wp_param_to_cookie_time')); ?>">
                     </td>
                 </tr>
             </table>
@@ -54,9 +62,24 @@ add_action('admin_init', 'wp_param_to_cookie_register_settings');
 
 function wp_param_to_cookie_register_settings() {
     register_setting(
-        'wp_param_to_cookie-settings-group',
+        'wp_param_to_cookie_settings_group',
         'wp_param_to_cookie_variable',
-        'sanitize_text_field'
+        array(
+            'type'              => 'string',
+            'description'       => 'Parameter list',
+            'sanitize_callback' => 'sanitize_text_field',
+            'show_in_rest'      => false,
+        )
+    );
+    register_setting(
+        'wp_param_to_cookie_settings_group',
+        'wp_param_to_cookie_time',
+        array(
+            'type'              => 'integer',
+            'description'       => 'Cookie expiry time',
+            'sanitize_callback' => 'sanitize_text_field',
+            'show_in_rest'      => false,
+        )
     );
 }
 // make sure the cookie setting is done before output is send
@@ -65,6 +88,7 @@ add_action( 'init', 'wp_param_to_cookie_function' );
 function wp_param_to_cookie_function() {
     $wp_param = get_option('wp_param_to_cookie_variable');
     $a_wp_param = explode(',', $wp_param) ;
+    $wp_param_time = get_option('wp_param_to_cookie_time');
     foreach($a_wp_param as $wp_param_key => $wp_param_value) {
         if (
             isset($_REQUEST[$wp_param_value])
@@ -73,9 +97,10 @@ function wp_param_to_cookie_function() {
             setcookie(
                 $wp_param_value
                 , $_REQUEST[$wp_param_value]
-                , time() + 60 * 60 * 24 // what is a good time? TODO: setting in panel
+                , time() + (int)$wp_param_time // what is a good time?
                 , COOKIEPATH, COOKIE_DOMAIN
             );
+            // return 'name: ' . $wp_param_value . ' time added: ' .$wp_param_time . ' value: ' . $_REQUEST[$wp_param_value] ;
         }
     }
 }

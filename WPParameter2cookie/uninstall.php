@@ -3,7 +3,6 @@
 if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
     die;
 }
-
-$option_name = 'wp_param_to_cookie_variable';
-
-delete_option( $option_name );
+// delete options set by plugin
+delete_option( 'wp_param_to_cookie_variable');
+delete_option( 'wp_param_to_cookie_time' );
