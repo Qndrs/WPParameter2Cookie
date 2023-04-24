@@ -8,7 +8,7 @@ Author: Qndrs
 Author URI: qndrs.training
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
-Version: 1.2
+Version: 1.3
 */
 
 // Add a panel to the administration area, settings panel
@@ -107,14 +107,31 @@ function wp_param_to_cookie_function():Array {
     return $a_cookiesset ;
 }
 
+function wp_param_to_cookie_read_function():Array {
+    $wp_param = get_option('wp_param_to_cookie_variable');
+    $a_wp_param = explode(',', $wp_param) ;
+    $a_cookiesset = array();
+    foreach($a_wp_param as $wp_param_key => $wp_param_value) {
+        if (
+            isset($_COOKIE[$wp_param_value])
+            and !empty($_COOKIE[$wp_param_value])
+        ) {
+            $a_cookiesset[$wp_param_value] = $_COOKIE[$wp_param_value] ;
+        }
+    }
+    return $a_cookiesset ;
+}
+
 function wp_param_to_cookie_shortcode_function($atts):String {
-    $message = null;
+    $message = '';
     $atts = shortcode_atts( array(
         'report' => 'off',
-        'format' => 'json'
+        'format' => 'json',
+        'read'   => 'off'
     ), $atts );
     $report = $atts['report'] ; // on or off. Default: off
     $format = $atts['format'] ; // txt or json. Default: json
+    $read   = $atts['read'] ; // displays the possible set cookies by the plugin. Overwrites report option.
     $result = wp_param_to_cookie_function();
     if($report == 'on' AND $format == 'txt'){
         foreach ($result as $key => $value){
@@ -123,6 +140,11 @@ function wp_param_to_cookie_shortcode_function($atts):String {
     } elseif($report == 'on' AND $format == 'json') {
         $message .= '<pre>' . json_encode($result) . '</pre>';
     }
+    // just read the cookie(s)
+    if($read == 'on'){
+        $result = wp_param_to_cookie_read_function();
+        $message = json_encode($result);
+    }
     return $message;
 }
-add_shortcode( 'wp_param_to_cookie', 'wp_param_to_cookie_shortcode_function' ); 
+add_shortcode( 'wp_param_to_cookie', 'wp_param_to_cookie_shortcode_function' );
