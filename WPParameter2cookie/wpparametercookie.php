@@ -8,7 +8,7 @@ Author: Qndrs
 Author URI: qndrs.training
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
-Version: 1.0
+Version: 1.1
 */
 
 // Add a panel to the administration area, settings panel
