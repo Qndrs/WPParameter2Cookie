@@ -37,6 +37,9 @@ function wp_param_to_cookie_render_admin_panel() {
                 <tr>
                     <th scope="row" style="width: 30%">
                         <label for="wp_param_to_cookie_variable">Welke parameter(s) moeten in een cookie? Kommagescheiden lijst wanneer meer dan 1.<br>Shortcode: [wp_param_to_cookie ]</label>
+                        <p>Overige shortcode functies zijn:<br>
+                           Een read parameter om ingestelde cookie(s) te lezen en weer te geven als json. [wp_param_to_cookie read="on"]<br>
+                           Een rapportage shortcode parameter functie. De parameters report = "on" (default off) and format = "txt" | "json" (default json) Bijvoorbeeld: [wp_param_to_cookie report="on" format="txt"]</p>
                     </th>
                     <td>
                         <input type="text" id="wp_param_to_cookie_variable" name="wp_param_to_cookie_variable" value="<?php echo esc_attr(get_option('wp_param_to_cookie_variable')); ?>">
