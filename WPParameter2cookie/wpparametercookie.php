@@ -8,7 +8,7 @@ Author: Qndrs
 Author URI: qndrs.training
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
-Version: 1.3
+Version: 2.3
 */
 
 // Add a panel to the administration area, settings panel
@@ -27,6 +27,8 @@ function wp_param_to_cookie_add_admin_panel() {
 
 // Render the admin panel
 function wp_param_to_cookie_render_admin_panel() {
+    // Fetch data from the wp_param_to_cookie_data table
+    $data = wp_param_to_cookie_get_data();
     ?>
     <div class="wrap">
         <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
@@ -36,8 +38,8 @@ function wp_param_to_cookie_render_admin_panel() {
             <table class="form-table">
                 <tr>
                     <th colspan="2">
-                        <p>Shortcode: <span style="font-weight: bolder">[wp_param_to_cookie ]</span><br>
-                            Overige shortcode functies zijn:<br>
+                            <p>Shortcode: <span style="font-weight: bolder">[wp_param_to_cookie ]</span><br>
+                            Shortcode functies zijn:<br>
                             Een read parameter om ingestelde cookie(s) te lezen en weer te geven als json. [wp_param_to_cookie read="on"]<br>
                             Een rapportage shortcode parameter functie. De parameters report = "on" (default off) and format = "txt" | "json" (default json) Bijvoorbeeld: [wp_param_to_cookie report="on" format="txt"]</p>
                     </th>
@@ -62,6 +64,34 @@ function wp_param_to_cookie_render_admin_panel() {
             <?php submit_button(); ?>
         </form>
     </div>
+    <?php
+    // Add a new section to display the data in a table
+    ?>
+    <h2>Data from wp_param_to_cookie_data table</h2>
+    <table id="wp_param_to_cookie_data_table" class="wp-list-table widefat fixed striped">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Cookie Name</th>
+            <th>Cookie Value</th>
+            <th>IP Address</th>
+            <th>Hostname</th>
+            <th>Date Created</th>
+        </tr>
+        </thead>
+        <tbody>
+        <?php foreach ($data as $row) : ?>
+            <tr>
+                <td><?php echo $row['id']; ?></td>
+                <td><?php echo $row['cookie_name']; ?></td>
+                <td><?php echo $row['cookie_value']; ?></td>
+                <td><?php echo $row['ip_address']; ?></td>
+                <td><?php echo $row['hostname']; ?></td>
+                <td><?php echo $row['date_created']; ?></td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
     <?php
 }
 
@@ -91,7 +121,17 @@ function wp_param_to_cookie_register_settings() {
     );
 }
 // make sure the cookie setting is done before output is send
-add_action( 'init', 'wp_param_to_cookie_function' );
+add_action( 'init', 'wp_param_to_cookie_check_shortcode' );
+// check if shortcode is in page
+function wp_param_to_cookie_check_shortcode() {
+    global $post;
+    // Replace 'your_shortcode' with the actual name of your shortcode
+    if (is_singular() && has_shortcode($post->post_content, 'wp_param_to_cookie')) {
+        wp_param_to_cookie_function('off');
+    }
+}
+
+
 // create a database table when the plugin is activated
 function wp_param_to_cookie_create_db_table() {
     global $wpdb;
@@ -114,8 +154,17 @@ function wp_param_to_cookie_create_db_table() {
 // Create the table when the plugin is activated
 register_activation_hook(__FILE__, 'wp_param_to_cookie_create_db_table');
 
+// Read the table data for display in a table
+function wp_param_to_cookie_get_data() {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'wp_param_to_cookie_data';
+    $results = $wpdb->get_results("SELECT * FROM $table_name", ARRAY_A);
+    return $results;
+}
+
+
 // function that explodes the param string and walks through it
-function wp_param_to_cookie_function(): Array {
+function wp_param_to_cookie_function($readonly = 'off'): Array {
     global $wpdb;
     $table_name = $wpdb->prefix . 'wp_param_to_cookie_data';
 
@@ -123,37 +172,39 @@ function wp_param_to_cookie_function(): Array {
     $a_wp_param = explode(',', $wp_param);
     $wp_param_time = get_option('wp_param_to_cookie_time');
     $a_cookiesset = array();
+//    if($readonly == 'off') { // TODO: possible switch moment
+        // Get IP address and hostname
+        $ip_address = $_SERVER['REMOTE_ADDR'];
+        $hostname   = gethostbyaddr( $ip_address );
 
-    // Get IP address and hostname
-    $ip_address = $_SERVER['REMOTE_ADDR'];
-    $hostname = gethostbyaddr($ip_address);
+        foreach ( $a_wp_param as $wp_param_key => $wp_param_value ) {
+            if (
+                isset( $_REQUEST[ $wp_param_value ] )
+                and ! empty( $_REQUEST[ $wp_param_value ] )
+            ) {
+                setcookie(
+                    $wp_param_value,
+                    $_REQUEST[ $wp_param_value ],
+                    time() + (int) $wp_param_time,
+                    COOKIEPATH, COOKIE_DOMAIN
+                );
+                $a_cookiesset[ $wp_param_value ] = $_REQUEST[ $wp_param_value ];
 
-    foreach ($a_wp_param as $wp_param_key => $wp_param_value) {
-        if (
-            isset($_REQUEST[$wp_param_value])
-            and !empty($_REQUEST[$wp_param_value])
-        ) {
-            setcookie(
-                $wp_param_value,
-                $_REQUEST[$wp_param_value],
-                time() + (int)$wp_param_time,
-                COOKIEPATH, COOKIE_DOMAIN
-            );
-            $a_cookiesset[$wp_param_value] = $_REQUEST[$wp_param_value];
-
-            // Store cookie in the database
-            $wpdb->insert(
-                $table_name,
-                array(
-                    'cookie_name' => $wp_param_value,
-                    'cookie_value' => $_REQUEST[$wp_param_value],
-                    'ip_address' => $ip_address,
-                    'hostname' => $hostname,
-                ),
-                array('%s', '%s', '%s', '%s')
-            );
+                // Store cookie in the database
+                $wpdb->insert(
+                    $table_name,
+                    array(
+                        'cookie_name'  => $wp_param_value,
+                        'cookie_value' => $_REQUEST[ $wp_param_value ],
+                        'ip_address'   => $ip_address,
+                        'hostname'     => $hostname,
+                    )
+                    ,
+                    array( '%s', '%s', '%s', '%s' )
+                );
+            }
         }
-    }
+//    }
     return $a_cookiesset;
 }
 
@@ -183,7 +234,7 @@ function wp_param_to_cookie_shortcode_function($atts):String {
     $report = $atts['report'] ; // on or off. Default: off
     $format = $atts['format'] ; // txt or json. Default: json
     $read   = $atts['read'] ; // displays the possible set cookies by the plugin. Overwrites report option.
-    $result = wp_param_to_cookie_function();
+    $result = wp_param_to_cookie_function('on'); //
     if($report == 'on' AND $format == 'txt'){
         foreach ($result as $key => $value){
             $message .= 'Cookie name: ' . $key . ' with value: ' . $value . '<br>' ;
@@ -199,3 +250,18 @@ function wp_param_to_cookie_shortcode_function($atts):String {
     return $message;
 }
 add_shortcode( 'wp_param_to_cookie', 'wp_param_to_cookie_shortcode_function' );
+
+// enqueue the reporting table sorting scripts to WordPress
+function wp_param_to_cookie_enqueue_scripts($hook) {
+    if ('settings_page_wp_param_to_cookie_settings' !== $hook) {
+        return;
+    }
+
+    // Enqueue sorttable.js
+    wp_enqueue_script('sorttable', plugin_dir_url(__FILE__) . 'sorttable.js');
+
+    // Enqueue wp_param_to_cookie_admin.js
+    wp_enqueue_script('wp_param_to_cookie_admin', plugin_dir_url(__FILE__) . 'wp_param_to_cookie_admin.js', array('sorttable'), '1.0.0', true);
+}
+
+add_action('admin_enqueue_scripts', 'wp_param_to_cookie_enqueue_scripts');
