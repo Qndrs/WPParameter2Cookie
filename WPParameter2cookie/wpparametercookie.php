@@ -92,28 +92,71 @@ function wp_param_to_cookie_register_settings() {
 }
 // make sure the cookie setting is done before output is send
 add_action( 'init', 'wp_param_to_cookie_function' );
+// create a database table when the plugin is activated
+function wp_param_to_cookie_create_db_table() {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'wp_param_to_cookie_data';
+    $charset_collate = $wpdb->get_charset_collate();
+
+    $sql = "CREATE TABLE $table_name (
+        id BIGINT(20) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        cookie_name VARCHAR(255) NOT NULL,
+        cookie_value VARCHAR(255) NOT NULL,
+        ip_address VARCHAR(45) NOT NULL,
+        hostname VARCHAR(255) NOT NULL,
+        date_created DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) $charset_collate;";
+
+    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+    dbDelta($sql);
+}
+
+// Create the table when the plugin is activated
+register_activation_hook(__FILE__, 'wp_param_to_cookie_create_db_table');
+
 // function that explodes the param string and walks through it
-function wp_param_to_cookie_function():Array {
+function wp_param_to_cookie_function(): Array {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'wp_param_to_cookie_data';
+
     $wp_param = get_option('wp_param_to_cookie_variable');
-    $a_wp_param = explode(',', $wp_param) ;
+    $a_wp_param = explode(',', $wp_param);
     $wp_param_time = get_option('wp_param_to_cookie_time');
     $a_cookiesset = array();
-    foreach($a_wp_param as $wp_param_key => $wp_param_value) {
+
+    // Get IP address and hostname
+    $ip_address = $_SERVER['REMOTE_ADDR'];
+    $hostname = gethostbyaddr($ip_address);
+
+    foreach ($a_wp_param as $wp_param_key => $wp_param_value) {
         if (
             isset($_REQUEST[$wp_param_value])
             and !empty($_REQUEST[$wp_param_value])
         ) {
             setcookie(
-                $wp_param_value
-                , $_REQUEST[$wp_param_value]
-                , time() + (int)$wp_param_time // what is a good time?
-                , COOKIEPATH, COOKIE_DOMAIN
+                $wp_param_value,
+                $_REQUEST[$wp_param_value],
+                time() + (int)$wp_param_time,
+                COOKIEPATH, COOKIE_DOMAIN
             );
-            $a_cookiesset[$wp_param_value] = $_REQUEST[$wp_param_value] ;
+            $a_cookiesset[$wp_param_value] = $_REQUEST[$wp_param_value];
+
+            // Store cookie in the database
+            $wpdb->insert(
+                $table_name,
+                array(
+                    'cookie_name' => $wp_param_value,
+                    'cookie_value' => $_REQUEST[$wp_param_value],
+                    'ip_address' => $ip_address,
+                    'hostname' => $hostname,
+                ),
+                array('%s', '%s', '%s', '%s')
+            );
         }
     }
-    return $a_cookiesset ;
+    return $a_cookiesset;
 }
+
 
 function wp_param_to_cookie_read_function():Array {
     $wp_param = get_option('wp_param_to_cookie_variable');
