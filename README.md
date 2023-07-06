@@ -50,7 +50,7 @@ Added a reporting table in the settings section.
 
 ### 2.0
 
-Added datatable storaga of cookies en domains.
+Added datatable storage of cookies en domains.
 
 ### 1.3
 
